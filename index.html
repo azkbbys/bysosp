@@ -6,13 +6,43 @@
 	<link rel="stylesheet" type="text/css" href="./files/style.css">
 	<link rel="stylesheet" type="text/css" href="./files/plugins.css">
     <script src="./files/txc-change-log.js"></script>
+	<style type="text/css">
+		#loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
 
+        .spinner {
+            border: 16px solid #f3f3f3;
+            border-top: 16px solid #3498db;
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+	</style>
 </head>
 
 <body class="opened">
+    <div id="loading">
+        <div class="spinner"></div>
+        <p>正在加载中...</p>
+    </div>
 	<div class="beker_tm_all_wrap" data-magic-cursor="">
-
-
 		<div class="beker_tm_topbar animate">
 			<div class="in">
 				<div class="container">
@@ -129,6 +159,9 @@
 
 	</div>
 <script>
+window.addEventListener('load', function() {
+    document.getElementById('loading').style.display = 'none';
+});
 </script>
 	<script src="./files/jquery1.js"></script>
 	<script src="./files/plugins.js"></script>
