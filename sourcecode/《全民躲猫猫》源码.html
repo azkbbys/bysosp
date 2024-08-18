@@ -1,0 +1,2020 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>《全民躲猫猫》源码</title>
+    <!-- 引入highlight.js的样式文件 -->
+    <link rel="stylesheet" href="https://azkbbys.github.io/code-viewer/files/default.min.css">
+    <style>
+        body {
+            background-color: #000000;
+        }
+    </style>
+</head>
+<body>
+    <div style="display: flex; justify-content: flex-end; margin-bottom: 10px;">
+        <button style="position: absolute; top: 10px;" onclick="copyCode()">复制</button>
+        <button id="download-html" style="position: absolute; top: 10px; right: 65px;" onclick="downloadHTML()">下载HTML文件</button>
+    </div>
+    <div id='code-input'><p>
+var admin = ['爱肝作品的小诚吖_赤炎宗','意柳','芸游XY','外向的雷电猴(巅峰队)','长恨.原一颗狼星','星光烈火龙','KO轩','唱跳rap只因']
+var adminpro = ['阿兹卡班毕业生','tangyuan儿','羽帆','SAZ','KyTT','执着的树毛虫','奶油.','奶油','奶油a','高冷的小魏1y','谢常浩然','怂怂的小彤e2','耐心的大黄鸡mSos','QTK.十字铁路DCB','张某数学']
+// var victory = false
+// var runtime = 0;
+var pbc = []
+var lzxglist = []
+var msglist = ['等你发言','等你发言']
+var dmm = false;
+var zbznc = [];
+var dcz = [];
+var dctime = 0;
+var zbtime = 0;
+var maxzbzrs = 0;
+var zbzrs = 0;
+var dczrs = 0;
+var starting = false;
+var dmmrenshu=0;
+var qiangzhistart=false;
+var onlineplayersname = []
+var cd = ''// 玩家名字存档
+console.clear()
+require('./setblock.js')
+require('./防止翻墙.js')
+
+function check(){
+    if(dmm==true){
+        zbzrs = 0;
+        dczrs = 0;
+        zbznc = [];
+        dcz = [];
+        world.querySelectorAll('player').forEach((e)=>{
+            if(e.dmmzy=='抓捕'&&e.player.spectator==false){
+                e.player.walkSpeed=0.3
+                e.player.runSpeed=0.5
+                zbzrs+=1
+                zbznc.push(e.player.name)
+                e.player.showName=true
+            }
+            else if(e.dmmzy=='躲藏'&&e.player.spectator==false){
+                e.player.walkSpeed=0.2
+                e.player.runSpeed=0.4
+                dczrs+=1
+                dcz.push(e.player.name)
+                e.player.color = new GameRGBColor(1,1,1)
+                e.player.showName=false
+            }
+            else{
+                e.player.walkSpeed=0.2
+                e.player.runSpeed=0.4
+                e.player.color = new GameRGBColor(1,1,1)
+            }
+            if(e.player.spectator==false){
+                if(e.position.y<=1){
+                    ycbj(e)
+                    e.dmmzy=''
+                    world.say(`${e.player.name} 掉出了世界`)
+                }
+            }
+            if(e.dmmzy=='抓捕'){
+                e.player.color = new GameRGBColor(1,0,0)
+            }
+            else if(e.adminlevel>0||admin.includes(e.player.name)||adminpro.includes(e.player.name)){
+                if(e.player.name!='阿兹卡班毕业生'){e.player.color = new GameRGBColor(1,1,0)}
+                else{e.player.color = new GameRGBColor(1,0,1)}
+            }
+            else{
+                e.player.color = new GameRGBColor(1,1,1)
+            }
+            if(dmm==true&&dctime>0){
+                if(e.dmmzy=='抓捕'){
+                    if(e.position.x>8&&e.position.z>10){
+                        e.position.set(4,3,5)
+                    }
+                }
+                else if(e.dmmzy=='躲藏'){
+                    if(e.position.x<8&&e.position.z<10){
+                        e.position.set(14,4,5)
+                    }
+                }
+            }
+        })
+        if(dctime>0||dmm==false){
+            // 碰撞过滤
+            world.addCollisionFilter('player','player')
+        }
+        else{
+            world.clearCollisionFilters()
+        }
+    }
+    else{
+        console.log('躲猫猫还未开始！')
+    }
+}
+function jitichuansong(){
+    world.querySelectorAll('player').forEach((e)=>{
+        e.player.link(`https://dao3.fun/play/35c454aa24cbeab4b088`, {isConfirm: false, isNewTab: false});
+    })
+    dcz=[]
+    zbznc=[]
+    runtime=0;
+    dctime=0;
+    zbtime=0;
+    dmm=false
+}
+function ycbj(e){
+    e.player.spectator=true
+    for (const bodyPart in e.player.skinInvisible) {
+        e.player.skinInvisible[bodyPart] = true;
+    }
+    e.player.showName=false;
+}
+function xsbj(e){
+    e.player.spectator=false
+    e.player.canFly=false;
+    for (const bodyPart in e.player.skinInvisible) {
+        e.player.skinInvisible[bodyPart] = false;
+    }
+    e.player.showName=false;
+}
+
+var Storage = storage.getGroupStorage('cundang'); // 获取数据库，名称为 cundang
+
+const CorrespondingName = { // 在此添加排行榜对应的单位和名称（无名称 则表示不显示名称）
+    'exp': ['经验', '无名称'],
+    'wintimes': ['场', '无名称']
+};
+
+const unsavedData = { // 玩家初始无需保存的数据，可增添或删除
+    ingjf: false,
+    cankick: true,
+    dmmzy: '',
+    dmmshoudao: false,
+    enableJoin: true
+};
+
+const savedData = { // 玩家初始需要保存的数据，可增添或删除
+    exp: 0,
+    bag: [],
+    greenlzxg: false,
+    adminlevel: 0,
+    wintimes: 0,
+    player_title: '玩家',
+    used_duihuanma: [],
+    skins: ['原版皮肤'],
+    usingskin: '原版',
+    invitor: '',
+    invite: 0,
+    last_team: 0
+};
+
+/**
+ * 初始化玩家数据
+ * 
+ * @param {GameEntity} entity
+ */
+function initPlayer(entity) { // 初始化玩家数据
+    Object.assign(entity, savedData);
+    Object.assign(entity, unsavedData);
+};
+
+/**
+ * 获取玩家数据
+ * 
+ * @param {GameEntity} entity
+ */
+function getPlayerData(entity) { // 获取玩家数据
+    var data = { 'name': entity.player.name };
+    for (let i in savedData) { // 遍历savedData，获取玩家当前数据
+        data[i] = entity[i];
+    };
+    return data;
+};
+
+/**
+ * 存档
+ * 
+ * @param {GameEntity} entity
+ */
+async function savePlayer(entity) { // 存档
+    await Storage.update(entity.player.userId, () => {  // 更新玩家数据存档
+        return getPlayerData(entity);
+    });
+};
+
+/**
+ * 删档
+ * 
+ * @param {GameEntity} entity
+ */
+async function deletePlayer(entity) { // 删档
+    entity.save = false
+    await Storage.remove(entity.player.userId); // 删除玩家数据存档
+};
+
+/**
+ * 读档
+ * 
+ * @param {GameEntity} entity
+ */
+async function loadPlayer(entity) { // 读档
+    initPlayer(entity);
+    var data = await Storage.get(entity.player.userId); // 获取数据
+    if (data) { // 如果数据存在
+        Object.assign(entity, data.value);
+        entity.player.directMessage('已为您读取数据！');
+    } else { // 如果数据不存在
+        await Storage.set(entity.player.userId, getPlayerData(entity));
+        world.say(`欢迎 @${entity.player.name} 首次进入游戏`)
+        entity.player.directMessage('已为您创建数据！');
+    };
+};
+
+/**
+ * 清档
+ */
+async function deleteAllData() { // 清档
+    var sqlDataList = await Storage.list({ // 将数据库内的所有数据分页
+        cursor: 0
+    });
+    world.querySelectorAll('player').forEach(x => x.save = false);
+    try {
+        while (true) {
+            for (let sqlData of sqlDataList.getCurrentPage()) { // 遍历获取数据
+                await Storage.remove(sqlData.key)
+            }
+            if (sqlDataList.isLastPage) break; // 如果已经是最后一页，退出循环
+            await sqlDataList.nextPage(); // 下一页
+        };
+    } catch (e) {}
+};
+
+/**
+ * 显示排行榜
+ * 
+ * @param {string} type
+ */
+async function leaderBoard(type) { // 排行榜
+    var list = [];
+    var sqlDataList = await Storage.list({ // 将数据库内的所有数据分页
+        cursor: 0
+    });
+    while (true) {
+        for (let sqlData of sqlDataList.getCurrentPage()) { // 遍历获取数据
+            list.includes([sqlData.value['name'], sqlData.value[type]]) ? null : list.push([sqlData.value['name'], sqlData.value[type]]);
+        }
+        list = list.sort((a, b) => b[1] - a[1]).slice(0, 100);
+        if (sqlDataList.isLastPage) break; // 如果已经是最后一页，退出循环
+        await sqlDataList.nextPage(); // 下一页
+    };
+    return list.map((value, num) => // 将列表里的所有项依次替换成字符串
+        `第${num + 1}名 | ${value[0]} | ${value[1]} ${CorrespondingName[type][0]}${CorrespondingName[type][1] != '无名称' ? CorrespondingName[type][1] : ''}`
+    ).join("\n"); // 按照 换行 的间隔组合成字符串
+};
+
+function find(name){
+    const a = world.querySelectorAll`player`;
+    for(let i in a)if(a[i].player.name == name)return a[i];
+}
+
+//私聊
+async function chats(entity, other, text) {
+    other.player.directMessage('收到一条私信')
+    const has = await other.player.dialog({
+        type: GameDialogType.SELECT,
+        title: "私聊",
+        titleTextColor: new GameRGBAColor(0, 0, 0, 1),
+        titleBackgroundColor: new GameRGBAColor(0.968, 0.702, 0.392, 1),
+        content: `${entity.player.name}：\n${text}`,
+        options: ['回复', '取消'],
+    });
+    if (!has || has === null) {
+        entity.player.directMessage('你被TA无逝了，呵呵哈哈');
+        return;
+    }
+    if (has.value === '回复') {
+        entity.player.directMessage('对方收到了你的私信')
+        const returns = await other.player.dialog({
+            type: GameDialogType.INPUT,
+            title: "私聊-回复",
+            titleTextColor: new GameRGBAColor(0, 0, 0, 1),
+            titleBackgroundColor: new GameRGBAColor(0.968, 0.702, 0.392, 1),
+            content: `${other.player.name}，请输入回复内容`,
+            confirmText: '发送',
+            placeholder: '输入回复内容',
+        });
+        if (!returns || returns === null) {
+            return;
+        }
+        chats(other, entity, returns)
+    }
+    else if (has.value === '取消') {
+        entity.player.directMessage('对方收到了你的私信')
+    }
+}
+world.onPlayerJoin(({ entity }) => {
+    entity.player.interactTimes = 0;
+    entity.enableInteract = true;
+    entity.interactRadius = 1.5;
+    if(entity.player_title){
+        entity.interactHint = `与 ${entity.player_title} ${entity.player.name} 互动`;
+    }
+    else{
+        entity.interactHint = `与 ${entity.player.name} 互动`;
+    }
+    entity.onInteract(async ({ entity, targetEntity }) => {
+        targetEntity.player.directMessage('你被 ' + entity.player.name + ' 访问了')
+        while (!entity.destroyed) {
+            const others = await entity.player.dialog({
+                type: GameDialogType.SELECT,
+                title: targetEntity.player.name + '',
+                titleTextColor: new GameRGBAColor(0, 0, 0, 1),
+                titleBackgroundColor: new GameRGBAColor(0.968, 0.702, 0.392, 1),
+                content: `你要干啥`,
+                options: ['和TA私聊','没啥，就看看'],
+            })
+            if (!others || others === null) {
+                return;
+            }
+            if (others.value == '和TA私聊') {
+                const chating = await entity.player.dialog({
+                    type: GameDialogType.INPUT,
+                    title: "私聊",
+                    titleTextColor: new GameRGBAColor(0, 0, 0, 1),
+                    titleBackgroundColor: new GameRGBAColor(0.968, 0.702, 0.392, 1),
+                    content: `${entity.player.name}，请输入私聊内容`,
+                    confirmText: '发送',
+                    placeholder: '输入私聊内容',
+                });
+                if (!chating || chating === null) {
+                    return;
+                }
+                chats(entity, targetEntity, chating)
+                return;
+            }
+        }
+    })
+})
+
+
+async function dialog(title,content,entity){
+    const result = await entity.player.dialog({
+        type: GameDialogType.TEXT,
+        title: title,
+        content: content,
+    });
+}
+
+world.onPlayerJoin(({entity})=>{
+    entity.player.jumpPower=0.7
+    entity.player.doubleJumpPower=0.7
+    if(dmm=true){
+        ycbj(entity);
+        if(world.querySelectorAll('player').length>1)
+        dialog('提示','将在下一轮加入游戏，你可以飞行',entity)
+    }
+})
+
+//sql相关
+world.onPlayerLeave(async({entity})=>{
+    entity.save != false ? await savePlayer(entity) : null; // 存档
+    savePlayer(entity);
+})
+// const points = world.querySelectorAll('.存档点')
+// points.forEach((e)=>{
+//     e.onEntityContact(({other})=>{
+//         const spawnPoint = e.position.add({x: 0,y: 2.5,z: 0});
+//         if(spawnPoint.equals(other.player.spawnPoint))return;
+//         other.player.spawnPoint = spawnPoint;
+//         other.zhutu_position_x=e.position.x;
+//         other.zhutu_position_y=e.position.y+2.5;
+//         other.zhutu_position_z=e.position.z;
+//         savePlayer(other);
+//         other.player.directMessage('存档成功！');
+//         if(other.victory==false){
+//             other.exp+=1;
+//         }
+//     })
+// })
+// world.onFluidEnter(({entity, tick, voxel}) => {
+//     const voxelName = voxels.name(voxel)
+//     if (voxelName=='water'&&entity.ingjf==false){
+//         entity.player.forceRespawn()
+//         entity.player.directMessage(`落水重生`)
+//     }
+// })
+
+// 进入地图欢迎
+world.onPlayerJoin(async({entity})=>{
+    // const result3 = await entity.player.dialog({
+    //     type: GameDialogType.SELECT,
+    //     title: '',
+    //     content: `欢迎来到《全民躲猫猫》，点击“确定”或“X”时将会读取您的sql信息，请确保您的设备适合游玩本地图，否则如果数据丢失（一般不可能）作者不负任何责任\n点击“退出游戏”将会踢出游戏`,
+    //     options:['确定','退出游戏']
+    // });
+    // if(!result3 || result3 === null){
+    //     return;
+    // }
+    // else if(result3.value!='确定'){
+    //     entity.player.kick()
+    // }
+    await loadPlayer(entity);
+    if(entity.adminlevel>=2||adminpro.includes(entity.player.name)){
+        remoteChannel.sendClientEvent(entity, {
+            type:'command',
+            args:'opencmd'
+        })
+    }
+    // 更换皮肤
+    if(entity.usingskin!='原版'){
+        entity.player.setSkinByName(entity.usingskin);
+    }
+
+    if(world.querySelectorAll('player').length<2){
+        dialog(`欢迎`,`欢迎来到地图！但是游戏至少要2人才能开始，复制网站链接邀请别人来一起玩吧！`,entity)
+    }
+    if(entity.player_title=='玩家'||entity.player_title==''){
+        if(entity.player.name=='阿兹卡班毕业生'||entity.player.name=='SAZ'||entity.player.name=='羽帆'){
+            entity.player_title = '作者';
+        }
+        else if(adminpro.includes(entity.player.name)||entity.adminlevel>1){
+            entity.player_title = '高级管理员';
+        }
+        else if(admin.includes(entity.player.name)||entity.adminlevel==1){
+            entity.player_title = '管理员';
+        }
+        else{
+            entity.player_title='玩家'
+        }
+    }
+    world.say(`欢迎 ${entity.player_title} ${entity.player.name} 进入地图`)
+    try{
+        entity.playerurl_string = entity.player.url;
+        entity.playerurl  = new URL(entity.playerurl_string);
+        if(entity.playerurl.searchParams.get('fromUserId')){
+            savePlayer(entity)
+            world.querySelectorAll('player').forEach((e)=>{
+                if(e.player.userId==entity.playerurl.searchParams.get('fromUserId')&&entity.playerurl.searchParams.get('fromUserId')!=entity.player.userId&&entity.invitor==''){
+                    entity.invitor = entity.playerurl.searchParams.get('fromUserId')
+                    dialog(`邀请福利`,`邀请成功，${entity.player.name}，已自动领取福利`,e)
+                    dialog(`邀请福利`,`为对方助力成功，${e.player.name}`,entity)
+                    world.say(`${e.player.name} 通过 邀请福利 邀请了 ${entity.player.name}，领取了福利！你也快点击右键-邀请福利查看吧~`)
+                    e.invite+=1
+                    e.exp+=1000
+                    if(e.player_title.indexOf("宣传大使") == -1){
+                        e.player_title+=" 宣传大使"
+                    }
+                    savePlayer(e)
+                }
+            })
+        }
+        else{
+            world.querySelectorAll('player').forEach((e)=>{
+                if(e.player.userId==entity.invitor){
+                    dialog(`邀请福利`,`邀请失败，${entity.player.name}`,e)
+                }
+            })
+        }
+    }
+    catch(e){}
+    // 检测组队
+    try{
+        entity.playerurl_string = entity.player.url;
+        entity.playerurl  = new URL(entity.playerurl_string);
+        const date = new Date(Date.now());
+        const month = date.getMonth() + 1;
+        const day = date.getDate();
+        if(entity.playerurl.searchParams.get('serverId')&&entity.playerurl.searchParams.get('teamId')&&entity.last_team!=month+day){
+            entity.can=true;
+            world.querySelectorAll('player').forEach((e)=>{
+                e.playerurl_string = e.player.url;
+                e.playerurl  = new URL(e.playerurl_string);
+                if(e.playerurl.searchParams.get('serverId')&&e.playerurl.searchParams.get('teamId')){}
+                else{
+                    entity.can=false
+                }
+            })
+            if(entity.can==true){
+                entity.exp = 10000
+                entity.last_team = month+day
+                savePlayer(entity)
+                dialog(`组队福利领取成功`,`${entity.player.name}，欢迎使用组队功能来到本地图，1w经验已自动领取\n若您是队长，可以截图队伍界面后联系毕业生领取管理员`,entity)               
+            }
+            else{
+                dialog(`组队福利领取失败`,`${entity.player.name}，偷偷改链接是没用的哦~`,entity)
+            }
+        }
+        else{
+            if(entity.last_team==month+day){
+                dialog(`组队福利领取失败`,`${entity.player.name}，今天你已领过组队福利，请明天再来！`,entity)
+            }
+        }
+    }
+    catch(e){}
+})
+
+
+world.onChat(({message,entity})=>{
+    for(var i = 0;i<pbc.length;i++){
+        if(message.indexOf(pbc[i])!=-1&&entity.adminlevel==0&&admin.includes(entity.player.name)==false&&adminpro.includes(entity.player.name)==false){
+            entity.player.kick()
+        }
+    }
+    var huancun = msglist[0];
+    msglist[0]=entity.player.name+'：\n'+message;
+    for(var i=1;i<=2;i++){
+        msglist[i] = huancun;
+        huancun = msglist[i+1]
+    }
+    if(message.startsWith('$')==false){
+        world.say(`${entity.player.name}：${message}`)
+    }
+    if(entity.player.name!='阿兹卡班毕业生'&&(message==`ban 阿兹卡班毕业生`||message==`kick 阿兹卡班毕业生`)){
+        dialog(`作者`,`胆子很大啊！敢封禁/踢出作者！`,entity);
+        entity.position.set(2,6,10);
+    }
+})
+// })
+// world.onPlayerJoin(({entity})=>{
+//     entity.player.onChat(({message,entity:user})=>{world.say(`${user.player.name}：${message}`)})
+// })
+
+// 碰撞过滤
+world.addCollisionFilter('player','player')
+
+// 管理员代码
+world.onChat(({ entity, message }) => {
+    if(admin.includes(entity.player.name)||entity.adminlevel>1||adminpro.includes(entity.player.name)){
+        if (message.startsWith('$')) {
+            try {
+                world.say('<~ ' + eval(message.slice(1)))
+            }
+            catch (err) {
+                world.say('<~ ' + err)
+            }
+        }
+    }
+})
+
+const particle_greenCrystal = {
+    particleRate: 500,
+    particleLifetime: 0.4,
+    particleSize: [4, 3, 2, 1, 0.25],
+    particleColor: [
+        new GameRGBColor(1, 1, 0),
+        new GameRGBColor(0, 1, 0),
+        new GameRGBColor(0, 1, 0),
+        new GameRGBColor(0, 1, 0),
+        new GameRGBColor(1, 1, 1)
+    ],
+}
+const test_green = {
+    particleRate: 500,
+    particleLifetime: 999,
+    particleSize: [4, 3, 2, 1, 0.25],
+    particleColor: [
+        new GameRGBColor(1, 1, 0),
+        new GameRGBColor(0, 1, 0),
+        new GameRGBColor(0, 1, 0),
+        new GameRGBColor(0, 1, 0),
+        new GameRGBColor(1, 1, 1)
+    ],
+}
+const particle_purpleCrystal = {
+    particleRate: 500,
+    particleLifetime: 0.4,
+    particleSize: [4, 3, 2, 1, 0.25],
+    particleColor: [
+        new GameRGBColor(0, 0, 1),
+        new GameRGBColor(0, 0, 1),
+        new GameRGBColor(1, 0, 1),
+        new GameRGBColor(1, 0, 1),
+        new GameRGBColor(1, 1, 1)
+    ],
+}
+const wcbl = {
+    particleRate: 700,
+    particleLifetime: 1.5,
+    particleSize: [1.5, 1.5, 1.5, 1.5, 1.5],
+    particleColor: [
+        new GameRGBColor(0, 1, 0),
+        new GameRGBColor(0, 0, 1),
+        new GameRGBColor(1, 0, 1),
+        new GameRGBColor(0, 1, 1),
+        new GameRGBColor(1, 1, 1)
+    ],
+}
+world.onPlayerJoin(async({entity})=>{
+    if(entity.player.name=='阿兹卡班毕业生'){
+        Object.assign(entity, wcbl)
+    }
+    else if(admin.includes(entity.player.name)||entity.adminlevel>1||adminpro.includes(entity.player.name)){
+        Object.assign(entity, particle_purpleCrystal)
+    }
+    else if(entity.greenlzxg==true||lzxglist.includes(entity.player.userKey)||lzxglist.includes(entity.player.name)){
+        Object.assign(entity, particle_greenCrystal)
+    }
+})
+
+// 右键菜单
+world.onPress(async({button,entity})=>{
+    if(button==='action1'){
+        const result = await entity.player.dialog({
+            type: GameDialogType.SELECT,
+            title: '游戏菜单',
+            content:`你有${entity.exp}经验\n`+`你的userkey：${entity.player.userKey}\n`+ `你的血量：`+entity.hp+`/`+entity.maxHp+`\n你的坐标：`+entity.position+`\n你胜利了${entity.wintimes}次`,
+            options:['赞助毕业生，得顶级福利','sql相关','放弃本场游戏','邀请福利','关于gameUi','兑换码','加入q群','商店','皮肤库','背包','排行榜','切换人称','发言','管理员工具']
+        });
+        if(!result || result.value === null){ 
+            return; 
+        }
+        else if(result.value=='赞助毕业生，得顶级福利'){
+            entity.player.link(`https://azkbbys.gitbook.io/azkbbys/zzbys`, {isConfirm: false, isNewTab: true})
+        }
+        else if(result.value=='sql相关'){
+            const result = await entity.player.dialog({
+                type: GameDialogType.SELECT,
+                title: '选择',
+                content:`请选择你要进行的操作`,
+                options:['取消','✔存档','❌删档']
+            });
+            if(!result || result.value === null){ 
+                return; 
+            }
+            else if(result.value=='✔存档'){
+                await savePlayer(entity);
+                dialog(`系统`,`存档成功！`,entity)
+            }
+            else if(result.value=='❌删档'){
+                const result = await entity.player.dialog({
+                    type: GameDialogType.SELECT,
+                    title: '警告',
+                    content:`你确定要删档吗？\n删档后一切数据将消失！\n不能后悔！`,
+                    options:['不确定','算了','没想好','不删','删了吧']
+                });
+                if(!result || result.value === null){ 
+                    return; 
+                }
+                else if(result.value=='删了吧'){
+                    Object.assign(entity, savedData);
+                    savePlayer(entity);
+                    entity.player.kick();
+                }
+            }
+        }
+        else if(result.value=='放弃本场游戏'){
+            if(entity.dmmzy!=''&&dmm==true&&dctime<=0&&zbtime>0){
+                entity.dmmzy=''
+                ycbj(entity)
+                world.say(`${entity.player.name} 自己放弃了本场游戏`)
+                check()
+            }
+            else{
+                dialog(`错误`,`你不能放弃游戏，因为游戏还未开始`,entity)
+            }
+        }
+        else if(result.value=='邀请福利'){
+            await dialog(`邀请福利`,`关闭本对话框后，点击分享后，每一位玩家通过链接进入地图后，如果【你在地图】，将会自动领取每位玩家1000经验，并领取称号【宣传大使】`,entity)
+            entity.player.navigator.emitEvent('share', { 
+            	title:'分享', 
+            	description: 'description', 
+            	text: '一起来《全民躲猫猫》游玩吧~', 
+            }) 
+        }
+        else if(result.value=='关于gameUi'){
+            const result = await entity.player.dialog({
+                type: GameDialogType.SELECT,
+                title: 'gameUi',
+                content:`选择你要进行的操作`,
+                options:['取消操作','关闭gameUi','刷新gameUi内容/开启gameUi','刷新gameUi大小']
+            });
+            if(!result || result.value === null){ 
+                return; 
+            }
+            else if(result.value=='关闭gameUi'){
+                remoteChannel.sendClientEvent(entity, {type:'command',args:'close'})
+                remoteChannel.sendClientEvent(entity, {type:'command',args:'closecmd'})
+                entity.player.directMessage(`已关闭`)
+            }
+            else if(result.value=='刷新gameUi内容/开启gameUi'){
+                remoteChannel.sendClientEvent(entity, {
+                    type:'command',
+                    args:'open'
+                })
+                remoteChannel.sendClientEvent(entity, {
+                    type:'玩家信息1',
+                    args:{
+                        avatar:entity.player.avatar,
+                        name:entity.player.name,
+                        player_title:entity.player_title
+                    }
+                })
+                entity.player.directMessage(`刷新/开启成功`)
+            }
+            else if(result.value=='刷新gameUi大小'){
+                remoteChannel.sendClientEvent(entity, {
+                    type: '刷新大小',
+                    args: null
+                })
+                entity.player.directMessage(`当前暂不支持刷新，请刷新网页即可`)
+            }
+        }
+        else if(result.value=='(不)参与游戏'){
+            if(entity.enableJoin==true){
+                entity.enableJoin = false
+                entity.player.directMessage(`调整成功！你将不会参加游戏`)
+            }
+            else{
+                entity.enableJoin = true
+                entity.player.directMessage(`调整成功！你将会参加游戏`)
+            }
+        }
+        else if(result.value=='兑换码'){
+            entity.duihuanma = await entity.player.dialog({
+                type: GameDialogType.INPUT,
+                title: '兑换',
+                content: `输入你所获得的兑换码`,
+                confirmText: '确认',
+            });
+            if(!entity.duihuanma || entity.duihuanma === null){ 
+                entity.player.link(`http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=Atg_SCPUyp2d8yAAxjaozzjFH3eu198J&authKey=ohyqS%2FYbJ%2F3C%2BkzrFVQSS7wJoeifKFxeo8SNr4KsX7fey6sx%2Fy%2FX7JEF%2Bvtkryd1&noverify=0&group_code=763919859`, {isConfirm: false, isNewTab: true})
+            }
+            else if(entity.used_duihuanma.includes(entity.duihuanma)==true){
+                dialog(`错误`,`这个兑换码已经使用过了`,entity)
+            }
+            else{
+                const date = new Date(Date.now());
+                const month = date.getMonth() + 1;
+                const day = date.getDate();
+                const hour = date.getHours();
+                const minute = date.getMinutes();
+                if(entity.duihuanma=='示例'){
+                    // 被删除
+                }
+                else{
+                    dialog(`错误`,`兑换码不存在`,entity)     
+                }
+            }
+        }
+        else if(result.value=='加入q群'){
+            entity.player.link(`http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=Atg_SCPUyp2d8yAAxjaozzjFH3eu198J&authKey=ohyqS%2FYbJ%2F3C%2BkzrFVQSS7wJoeifKFxeo8SNr4KsX7fey6sx%2Fy%2FX7JEF%2Bvtkryd1&noverify=0&group_code=763919859`, {isConfirm: false, isNewTab: true})
+        }
+        else if(result.value=='皮肤库'){
+            const result = await entity.player.dialog({
+                type: GameDialogType.SELECT,
+                title: '选择皮肤',
+                content:`请选择要使用的皮肤`,
+                options:entity.skins
+            });
+            if(!result || result.value === null){ 
+                entity.player.resetToDefaultSkin()
+                entity.usingskin = '原版'
+            }
+            else if(result.value!='原版皮肤'){
+                entity.usingskin = result.value;
+                entity.player.setSkinByName(result.value)
+            }
+            else{
+                entity.player.resetToDefaultSkin()
+                entity.usingskin = '原版'
+            }
+            savePlayer(entity)
+            entity.player.directMessage('切换成功')
+        }
+        else if(result.value=='商店'){
+            const result = await entity.player.dialog({
+                type: GameDialogType.SELECT,
+                title: '商店分类',
+                content:`选择你要进入的商店`,
+                options:['技能商店','其它商店']
+            });
+            if(!result || result.value === null){ 
+                return; 
+            }
+            else if(result.value=='技能商店'){
+                const result = await entity.player.dialog({
+                    type: GameDialogType.SELECT,
+                    title: '你要买点啥？',
+                    content:`你要买点啥？\n你有${entity.exp}经验\n说明：名称（价格）（备注）`,
+                    options:['退出','增时药剂（30exp）（增加抓捕时间10秒）','超级增时药剂（100exp）（增加抓捕时间40秒）']
+                });
+                if(!result || result.value === null){ 
+                    return; 
+                }
+                else if(result.value=='增时药剂（30exp）（增加抓捕时间10秒）'){
+                    if(entity.exp>=30){
+                        entity.exp-=30;
+                        entity.bag.push('增时药剂')
+                        savePlayer(entity);
+                        entity.player.directMessage(`购买成功，已放入背包`)
+                    }
+                    else{
+                        dialog(`错误`,`经验不够！`,entity)
+                    }
+                }
+                else if(result.value=='超级增时药剂（100exp）（增加抓捕时间40秒）'){
+                    if(entity.exp>=100){
+                        entity.exp-=100;
+                        entity.bag.push('超级增时药剂')
+                        savePlayer(entity);
+                        entity.player.directMessage(`购买成功，已放入背包`)
+                    }
+                    else{
+                        dialog(`错误`,`经验不够！`,entity)
+                    }
+                }
+            }
+            else if(result.value=='其它商店'){
+                const result = await entity.player.dialog({
+                    type: GameDialogType.SELECT,
+                    title: '你要买点啥？',
+                    content:`你要买点啥？\n你有${entity.exp}经验\n说明：名称（价格）（备注）`,
+                    options:['退出','苦力怕皮肤（300exp）','史蒂夫皮肤（300exp）','“财主”称号（9999exp）（自动使用，除清档外不可卸下）']
+                });
+                if(!result || result.value === null){ 
+                    return; 
+                }
+                else if(result.value=='苦力怕皮肤（300exp）'){
+                    if(entity.exp>=300&&entity.skins.includes('苦力怕')==false){
+                        entity.exp-=300;
+                        entity.skins.push('苦力怕')
+                        savePlayer(entity);
+                        entity.player.directMessage(`购买成功，已放入皮肤库`)
+                    }
+                    else{
+                        dialog(`错误`,`经验不够或已有皮肤`,entity)
+                    }
+                }
+                else if(result.value=='史蒂夫皮肤（300exp）'){
+                    if(entity.exp>=300&&entity.skins.includes('史蒂夫')==false){
+                        entity.exp-=300;
+                        entity.skins.push('史蒂夫')
+                        savePlayer(entity);
+                        entity.player.directMessage(`购买成功，已放入皮肤库`)
+                    }
+                    else{
+                        dialog(`错误`,`经验不够或已有皮肤`,entity)
+                    }
+                }
+                else if(result.value=='“财主”称号（9999exp）（自动使用，除清档外不可卸下）'){
+                    if(entity.exp>=9999&&entity.player_title.indexOf('财主')==-1){
+                        entity.exp-=9999;
+                        entity.player_title+=' 财主'
+                        savePlayer(entity);
+                        entity.player.directMessage(`购买成功，已自动使用`)
+                    }
+                    else{
+                        dialog(`错误`,`经验不够或已有该称号`,entity)
+                    }
+                }
+            }
+        }
+        else if(result.value=='背包'){
+            const result = await entity.player.dialog({
+                type: GameDialogType.SELECT,
+                title: '你要使用啥？',
+                content:`你要使用啥？\n警告：点击后立即使用无确认\n退出请点X`,
+                options:entity.bag
+            });
+            if(!result || result.value === null){ 
+                return; 
+            }
+            else if(result.value=='增时药剂'){
+                let index = entity.bag.indexOf('增时药剂');
+                if (index !== -1) {
+                    entity.bag.splice(index, 1);
+                }
+                zbtime+=160;
+                world.say(`${entity.player.name} 使抓捕时间增加了10s`)
+                savePlayer(entity)
+                entity.player.directMessage('使用成功');
+            }
+            else if(result.value=='超级增时药剂'){
+                let index = entity.bag.indexOf('超级增时药剂');
+                if (index !== -1) {
+                    entity.bag.splice(index, 1);
+                }
+                zbtime+=640;
+                world.say(`${entity.player.name} 使抓捕时间增加了40s`)
+                savePlayer(entity)
+                entity.player.directMessage('使用成功');
+            }
+            else if(result.value=='无限飞行羽翼'){
+                entity.player.canFly=true;
+                entity.player.directMessage('使用成功')
+            }
+        }
+        else if(result.value=='排行榜'){
+            const result = await entity.player.dialog({
+                type: GameDialogType.SELECT,
+                title: '选择',
+                content:`你要查看什么排行榜？`,
+                options:['经验','胜利场数']
+            });
+            if(!result || result.value === null){ 
+                return; 
+            }
+            else if(result.value=='经验'){
+                await entity.player.dialog({
+                    type: 'select',
+                    title: '排行',
+                    content: await leaderBoard('exp'),
+                    options: ['确认']
+                });
+            }
+            else if(result.value=='胜利场数'){
+                await entity.player.dialog({
+                    type: 'select',
+                    title: '排行',
+                    content: await leaderBoard('wintimes'),
+                    options: ['确认']
+                });
+            }
+        }
+        else if(result.value=='切换人称'){
+            if (entity.player.cameraMode === GameCameraMode.FOLLOW) {
+                entity.player.cameraMode = GameCameraMode.FPS
+                entity.player.directMessage(`切换成功`)
+            }
+            else {
+                entity.player.cameraMode = GameCameraMode.FOLLOW
+                entity.player.directMessage(`切换成功`)
+            }
+        }
+        else if(result.value=='发言'){
+            const result = await entity.player.dialog({
+                type: GameDialogType.INPUT,
+                title: '发言',
+                content: `你想要说啥`,
+                confirmText: '警告！尽量不要使用本功能，发言不在聊天框展示',
+            });
+            if(!result || result === null){
+                return; 
+            }
+            else {
+                world.say(entity.player.name+'：'+result)
+            }
+        }
+        else if(result.value=='管理员工具'){
+            if(admin.includes(entity.player.name)||entity.adminlevel>0||adminpro.includes(entity.player.name)){
+                const result = await entity.player.dialog({
+                    type: GameDialogType.SELECT,
+                    title: '管理员工具',
+                    content: `选择你需要使用的工具\n写入sql的管理员等级：${entity.adminlevel}`,
+                    options:['【必读】管理员命令文档','飞行','降落','关闭粒子效果（开启请重进）','开启/关闭穿墙','（2级管理）隐藏gameui快速命令','（2级管理）直接击杀','（2级管理）复活玩家','玩家传送器','传送至某玩家','集体传送附图（不可用）','计时器','广播公告'/*,'对自己的gameUi执行命令','对全体玩家的gameUi执行命令'*/]
+                });
+                if(!result || result.value === null){ 
+                    return; 
+                }
+                else if(result.value=='【必读】管理员命令文档'){
+                    entity.player.link(`https://azkbbys.gitbook.io/azkbbys/docs/qmdmm/qmdmm-admin-code-tutorial`, {isConfirm: false, isNewTab: true});
+                }
+                else if(result.value=='飞行'){
+                    entity.player.canFly=true
+                    entity.player.directMessage('您可以飞行了')
+                }
+                else if(result.value=='降落'){
+                    entity.player.canFly=false
+                    entity.player.directMessage('降落成功')
+                    const allWearables = entity.player.wearables();
+                    // allWearables.forEach((item) => {
+                    //     item.remove();
+                    // });
+                }
+                else if(result.value=='关闭粒子效果（开启请重进）'){
+                    entity.particleLifetime=0;
+                    entity.player.directMessage('关闭成功（开启请重进）')
+                }
+                else if(result.value=='开启/关闭穿墙'){
+                    if(entity.player.spectator==false){
+                        entity.player.spectator=true
+                    }
+                    else{
+                        entity.player.spectator=false
+                    }
+                }
+                else if(result.value=='（2级管理）隐藏gameui快速命令'){
+                    if(entity.adminlevel>=2||adminpro.includes(entity.player.name)){
+                        remoteChannel.sendClientEvent(entity, {
+                            type:'command',
+                            args:'closecmd'
+                        })
+                    }
+                }
+                else if(result.value=='（2级管理）直接击杀'){
+                    if(entity.adminlevel>=2||adminpro.includes(entity.player.name)){
+                        const result = await entity.player.dialog({
+                            type: GameDialogType.INPUT,
+                            title: '击杀玩家',
+                            content: `你要击杀谁`,
+                            confirmText: '确认该名称',
+                        });
+                        if(!result || result === null){ 
+                            return; 
+                        }
+                        else{
+                            for (const e of world.querySelectorAll('player')){;
+                                if(e.player.name==result){;
+                                    ycbj(e)
+                                    e.dmmzy=''
+                                    world.say(`管理员 ${entity.player.name} 将 ${e.player.name} 直接击杀`)
+                                };
+                            };
+                        }
+                    }
+                }
+                else if(result.value=='（2级管理）复活玩家'){
+                    if(entity.adminlevel>=2||adminpro.includes(entity.player.name)){
+                        const result = await entity.player.dialog({
+                            type: GameDialogType.INPUT,
+                            title: '复活玩家',
+                            content: `你要复活谁`,
+                            confirmText: '确认该名称',
+                        });
+                        if(!result || result === null){ 
+                            return; 
+                        }
+                        else{
+                            const result2 = await entity.player.dialog({
+                                type: GameDialogType.INPUT,
+                                title: '复活玩家',
+                                content: `你要将ta作为什么角色复活，键入“抓捕”或“躲藏”`,
+                                confirmText: '确认',
+                            });
+                            if(!result2 || result2 === null){ 
+                                return; 
+                            }
+                            else{
+                                for (const e of world.querySelectorAll('player')){;
+                                    if(e.player.name==result){;
+                                        e.dmmzy = result2
+                                        e.position.set(6,3,5)
+                                        xsbj(e)
+                                        world.say(`管理员 ${entity.player.name} 将 ${e.player.name} 作为 ${result2} 复活`)
+                                    };
+                                };
+                            }
+                        }
+                    }
+                }
+                else if(result.value=='玩家传送器'){
+                    const playernamelist = []
+                    world.querySelectorAll('player').forEach((e)=>{
+                        if(e.player.name!=entity.player.name)
+                        playernamelist.push(e.player.name)
+                    })
+                    const result = await entity.player.dialog({
+                        type: GameDialogType.SELECT,
+                        title: '传送至某玩家',
+                        content: `你要传送谁到你的位置`,
+                        options:playernamelist
+                    });
+                    if(!result || result.value === null){ 
+                        return; 
+                    }
+                    else{
+                        for (const e of world.querySelectorAll('player')){;
+                            if(e.player.name==result.value){;
+                                e.position.x=entity.position.x
+                                e.position.y=entity.position.y
+                                e.position.z=entity.position.z
+                                entity.player.directMessage('传送成功！')
+                            };
+                        };
+                    }
+                }
+                else if(result.value=='传送至某玩家'){
+                    const playernamelist = []
+                    world.querySelectorAll('player').forEach((e)=>{
+                        if(e.player.name!=entity.player.name)
+                        playernamelist.push(e.player.name)
+                    })
+                    const result = await entity.player.dialog({
+                        type: GameDialogType.SELECT,
+                        title: '传送至某玩家',
+                        content: `你要传送你到谁的位置`,
+                        options:playernamelist
+                    });
+                    if(!result || result.value === null){ 
+                        return; 
+                    }
+                    else{
+                        for (const e of world.querySelectorAll('player')){;
+                            if(e.player.name==result.value){;
+                                entity.position.x=e.position.x
+                                entity.position.y=e.position.y
+                                entity.position.z=e.position.z
+                                entity.player.directMessage('传送成功！')
+                            };
+                        };
+                    }
+                }
+                else if(result.value=='集体传送附图！'){
+                    const result = await entity.player.dialog({
+                        type: GameDialogType.INPUT,
+                        title: '集体传送附图',
+                        content: `请输入作者给的代码以传送`,
+                        confirmText: '确认',
+                    });
+                    if(!result || result === null){ 
+                        return; 
+                    }
+                    else if(result=='123456'){
+                        world.say('请全体玩家注意，3秒即将进行集体传送至附图的操作')
+                        jitichuansong()
+                    }
+                }
+                else if(result.value=='计时器'){
+                    const result = await entity.player.dialog({
+                        type: GameDialogType.INPUT,
+                        title: '计时器',
+                        content: `你想计时多久`,
+                        confirmText: '“确定”',
+                    });
+                    console.log(entity.count)
+                    if(entity.count=true){
+                        let s = 0
+                        let m = 0
+                        let h = 0
+                        while(entity.count==true){
+                            s++
+                            if(s>=60){;m++;s=0}
+                            if(m>=60){;h++;m=0}
+                            if(h>=3){;entity.player.directMessage('计时最多3小时');return;}
+                            entity.player.directMessage(h+':'+m+':'+s)
+                            await sleep(1000)
+                        }
+                    }
+                    else{
+                        entity.player.directMessage('计时器关闭！')
+                    }
+                }
+                else if(result.value=='广播公告'){
+                    const result = await entity.player.dialog({
+                        type: GameDialogType.INPUT,
+                        title: '广播公告',
+                        content: `输入广播内容`,
+                        confirmText: '确认广播',
+                    });
+                    if(result){
+                        world.say(result)
+                    }
+                    // 保留备用
+                    // remoteChannel.sendClientEvent(world.querySelectorAll('player'), {
+                    //     type:'广播',
+                    //     args:{
+                    //         text: result
+                    //     }
+                    // })
+                }
+            }
+        }
+    }
+    else if(button=='action3'){
+        entity.player.cameraEntity=entity
+    }
+})
+// 模型运动
+/*
+const lotus_leaf = world.querySelector('#荷叶-2') //获取实体
+lotus_leaf.fixed = true//不受外力影响
+lotus_leaf.collides = true//允许碰撞
+const startPos_lotus_leaf = [63.7, 3.1, 3.7]//初始位置
+const endPos_lotus_leaf = [75, 3.1, 3.7]
+
+const ani_lotus_leaf = lotus_leaf.animate([
+    { position: startPos_lotus_leaf, duration: 0 },
+    { position: startPos_lotus_leaf, duration: 2 },
+    { position: endPos_lotus_leaf, duration: 0 },
+    { position: endPos_lotus_leaf, duration: 2 },
+    { position: startPos_lotus_leaf, duration: 0 },
+], {
+    duration: 16 * 4, //一个循环共用时
+    iterations: 1,//只播放1次
+    direction: GameAnimationDirection.WRAP,//让实体从终点回到起点
+})
+world.onPlayerJoin(({entity}) => {
+    ani_lotus_leaf.play({
+            duration: 16 * 4, //播放一个循环共用时20秒(每秒16帧),
+            iterations: Infinity,//动画无限次循环播放
+            direction: GameAnimationDirection.WRAP,//让动画实体从终点回到起点
+        })
+})
+*/
+
+// gui
+// const { GameEasyGUI } = require("./GameEasyGUI.js");          //导入GameEasyGUI.js
+// world.onPlayerJoin(async ({ entity }) => {
+//     var mygui = new GameEasyGUI("myGUI", entity);
+//     entity.gui = mygui;           //创建一个gui对象
+//     var dom = mygui.document;
+//     var show_dczrs = dom.createXml("label", {
+//         height: 20,
+//         width: 10000,
+//         color: "#fff",
+//         fontSize: 18,
+//         x: 10,
+//         y: 35,
+//         id:"show_dczrs"
+//     });                                                     //创建元素
+//     var show_zbzrs = dom.createXml("label", {
+//         height: 20,
+//         width: 10000,
+//         color: "#fff",
+//         fontSize: 18,
+//         x: 10,
+//         y: 60,
+//         id:"y"
+//     });                                                     //创建元素
+//     var show_time = dom.createXml("label", {
+//         height: 20,
+//         width: 10000,
+//         color: "#fff",
+//         fontSize: 18,
+//         x: 10,
+//         y: 85,
+//         id:"z"
+//     });
+//     var show_wintimes = dom.createXml("label", {
+//         height: 20,
+//         width: 100000000,
+//         color: "#fff",
+//         fontSize: 18,
+//         x: 10,
+//         y: 110,
+//         id:"wintimes"
+//     });
+//     var jf = dom.createXml("label", {
+//         height: 20,
+//         width: 10000000,
+//         color: "#fff",
+//         fontSize: 18,
+//         x: 10,
+//         y: 135,
+//         id:"jf"
+//     });
+//     var group = dom.createXml("group", {
+//         width: 240,
+//         height: 160,
+//         borderColor: "rgba(0,0,0,0)",
+//         backgroundColor: "rgba(0,0,0,0.45)",
+//         right:20,
+//         top:50
+//     }).appendChild(dom.createXml("label", {
+//         height: 20,
+//         width: 10000,
+//         color: "#fff",
+//         fontSize: 20,
+//         x: 10,
+//         y: 10,
+//         text: "世界/玩家信息"
+//     })).appendChild(show_dczrs).appendChild(show_zbzrs).appendChild(show_time).appendChild(jf).appendChild(show_wintimes);         //将创建好的元素插入group中     
+//     dom.appendChild(group);                                  //将元素插入document中
+//     mygui.render();                                            //渲染gui
+//     mygui.reload();                             //刷新
+
+
+//     var msg = new GameEasyGUI("msg", entity);
+//     entity.mesg = msg;           //创建一个gui对象
+//     var dom2 = msg.document;
+//     var msg1 = dom2.createXml("label", {
+//         height: 20,
+//         width: 200,
+//         color: "#fff",
+//         fontSize: 18,
+//         x: 10,
+//         y: 122,
+//         id:"msg1"
+//     });                                                     //创建元素
+//     var group1 = dom2.createXml("group", {
+//         width: 240,
+//         height: 272,
+//         borderColor: "rgba(0,0,0,0)",
+//         backgroundColor: "rgba(0,0,0,0.45)",
+//         right:20,
+//         top:215
+//     }).appendChild(dom2.createXml("label", {
+//         height: 20,
+//         width: 100,
+//         color: "#fff",
+//         fontSize: 20,
+//         x: 10,
+//         y: 10,
+//         text: "新消息"
+//     })).appendChild(msg1);         //将创建好的元素插入group中     
+//     dom2.appendChild(group1);                                  //将元素插入document中
+//     msg.render();                                            //渲染gui
+//     var button = dom.createXml("button",{
+//         text:"戳我发消息（防禁言）",
+//         x:10,
+//         y:235,
+//         percentWidth:90,
+//         height:30,
+//         color:"#fa0"
+//     });
+//     button.addEventListener("click",async function({entity}){
+//         const result = await entity.player.dialog({
+//             type: GameDialogType.INPUT,
+//             title: '发言',
+//             content: `你想要说啥`,
+//             confirmText: '确定发送，反悔请点X',
+//         });
+//         if(!result || result === null){
+//             return; 
+//         }
+//         else {
+//             world.say(entity.player.name+'：'+result)
+//             msglist[0]=entity.player.name+'：'+result
+//         }
+//     })
+//     group1.appendChild(button);
+//     msg.reload();                             //刷新
+// });
+// //循环显示信息
+// world.onTick(()=>{
+//     world.querySelectorAll('player').forEach((e)=>{
+//         if(e.gui){
+//             let dom = e.gui.document;
+//             let show_dczrs = dom.getElementById("show_dczrs");
+//             let show_zbzrs = dom.getElementById("y");
+//             let show_time = dom.getElementById("z");
+//             let jf = dom.getElementById("jf");
+//             let show_wintimes = dom.getElementById("wintimes");
+//             show_dczrs.setAttribute("text","剩余躲藏者："+Math.floor(dczrs)+"人");
+//             show_zbzrs.setAttribute("text","剩余抓捕者："+Math.floor(zbzrs)+"人");
+//             if(dctime<=0){
+//                 show_time.setAttribute("text","剩余抓捕时间："+Math.floor(zbtime/16)+"秒");  //设置元素文本
+//             }
+//             else{
+//                 show_time.setAttribute("text","剩余躲藏时间："+Math.floor(dctime/16)+"秒");  //设置元素文本
+//             }
+//             jf.setAttribute("text","经验："+Math.floor(e.exp));
+//             show_wintimes.setAttribute("text","胜利场数："+e.wintimes);
+//         }
+//         if(e.mesg){
+//             let dom2 = e.mesg.document;
+//             let msg1 = dom2.getElementById("msg1");
+//             msg1.setAttribute("text",msglist[0]);
+//         }
+//     })
+// })
+
+function getRandomNumber(n) {
+    return Math.floor(Math.random() * n) + 1;
+}
+
+world.onTick(async({tick})=>{
+    if(tick%36==0){
+        if(world.querySelectorAll('player').length<2&&qiangzhistart==false){
+            world.say('人数不够，无法开始游戏')
+            dmm=false;
+            starting = false;
+        }
+        else{
+            if(dmm==false&&starting==false){
+                starting = true;
+                for(var x = 8; x<=8; x++){
+                    for(var y = 1; y<=10; y++){
+                        for(var z = 1; z<=9; z++){
+                            voxels.setVoxel(x, y, z, 'glass');
+                        }
+                    }
+                };
+                for(var x = 1; x<=4; x++){
+                    for(var y = 26; y<=26; y++){
+                        for(var z = 1; z<=9; z++){
+                            voxels.setVoxel(x, y, z, 'glass');
+                        }
+                    }
+                };
+                world.querySelectorAll('player').forEach((e)=>{
+                    e.dmmzy='';
+                })
+                dcz=[];
+                zbznc=[];
+                dczrs=0;
+                zbzrs=0;
+                maxzbzrs = Math.floor(world.querySelectorAll('player').length/3)
+                if(maxzbzrs==0){
+                    maxzbzrs+=1;
+                }
+                await sleep(1000)
+                // while(true){
+                    onlineplayersname = []
+                    zbznc = []
+                    cd = ''
+                    world.querySelectorAll('player').forEach((e)=>{
+                        onlineplayersname.push(e.player.name)
+                    })
+                    while(zbznc.length<maxzbzrs){
+                        cd = onlineplayersname[getRandomNumber(onlineplayersname.length)-1]
+                        if(zbznc.includes(cd)==false){
+                            zbznc.push(cd)
+                        }
+                    }
+                    world.querySelectorAll('player').forEach((e)=>{
+                        if(zbznc.includes(e.player.name)){
+                            e.dmmzy='抓捕';
+                            zbzrs+=1;
+                        }
+                    })
+                    if(zbzrs>maxzbzrs||zbzrs==0){
+                        console.log('抓捕者设置失败正在重试')
+                        starting=false;
+                    }
+                    else{
+                        console.log('all right')
+                        // break;
+                        world.say('抓捕者为：'+zbznc)
+                    await sleep(1000)
+                    world.querySelectorAll('player').forEach((e)=>{
+                        if(zbznc.includes(e.player.name)==false){
+                            e.dmmzy='躲藏';
+                            dcz.push(e.player.name)
+                            dczrs+=1
+                        }
+                    })
+                    world.say('躲藏者为：'+dcz);
+                    qiangzhistart=false;
+                    zbtime=world.querySelectorAll('player').length*640;
+                    if(zbtime>=3000){
+                        zbtime=3000;
+                    }
+                    dctime=240;
+                    await sleep(3000);
+                    world.say('游戏还有6s开始')
+                    await sleep(6000);
+                    dmm=true;
+                    world.querySelectorAll('player').forEach((e)=>{
+                        xsbj(e)
+                    })
+                    starting=false
+                    }
+                // }
+            }
+        }
+    }
+})
+
+world.onPlayerJoin(({entity})=>{
+    world.onTick(({tick})=>{
+        if(dmm==true&&entity.dmmshoudao==false){
+            if(zbznc==entity.player.name){
+                entity.player.directMessage(`你是抓捕者`);
+                entity.player.color=new GameRGBColor(1,0,0);
+                entity.dmmzy='抓捕';
+                dialog(`操作说明`,`碰到躲藏者即可抓获`,entity)
+                entity.dmmshoudao=true;
+                entity.position.set(4,4,5);
+            }
+            else if(dcz.includes(entity.player.name)){
+                entity.player.directMessage(`你是躲藏者，快开始躲藏吧！`);
+                entity.dmmzy='躲藏';
+                dialog(`操作说明`,`不要被红色的抓捕者碰到！`,entity)
+                entity.player.color = new GameRGBColor(1,1,1);
+                entity.dmmshoudao=true;
+                entity.position.set(14,3,5)
+            }
+        }
+    })
+})
+
+world.onTick(async({tick})=>{
+    // if(tick%16==0){
+    //     runtime+=1;
+    //     if(runtime>=600){
+    //         console.log(tick)
+    //         world.say('地图运行时间达到上限，即将进行自动传送至附图');
+    //         await sleep(3000)
+    //         jitichuansong()
+    //     }
+
+    // }
+    if(dmm==true){
+        // if(beizhuadao.length==dcz.length==dczrs&&dmm==true&&zbzrs!=0){
+        //     dcz=[]
+        //     zbznc=[]
+        //     dctime=16;
+        //     zbtime=16;
+        //     dmm=false;
+        //     starting=false;
+        //     world.say(`躲猫猫结束，抓捕者胜利，在场抓捕者胜利次数+1，10s后开启新一轮`)
+        //     world.querySelectorAll('player').forEach((e)=>{
+        //         if(e.dmmzy=='抓捕'){
+        //             e.wintimes+=1;
+        //         }
+        //         e.dmmzy='';
+        //     })
+        //     world.querySelectorAll('player').forEach((e)=>{e.dmmshoudao=false;e.player.color=new GameRGBColor(1,1,1);ycbj(e)})
+        // }
+        if(dctime>=0){
+            if(tick%16==0){
+                dctime-=16;
+                if(dctime%160==0){
+                    world.say(`躲藏时间还剩${dctime/16}秒`)
+                }
+                world.clearCollisionFilters()
+                // voxels.setVoxel(0,16,4,String(dctime/16));
+                // entity.dmmshoudao=true
+            }
+            // 个位
+            if(dctime/16%10==0){
+                voxels.setVoxel(0,16,1,'zero');
+            }
+            else if(dctime/16%10==1){
+                voxels.setVoxel(0,16,1,'one');
+            }
+            else if(dctime/16%10==2){
+                voxels.setVoxel(0,16,1,'two');
+            }
+            else if(dctime/16%10==3){
+                voxels.setVoxel(0,16,1,'three');
+            }
+            else if(dctime/16%10==4){
+                voxels.setVoxel(0,16,1,'four');
+            }
+            else if(dctime/16%10==5){
+                voxels.setVoxel(0,16,1,'five');
+            }
+            else if(dctime/16%10==6){
+                voxels.setVoxel(0,16,1,'six');
+            }
+            else if(dctime/16%10==7){
+                voxels.setVoxel(0,16,1,'seven');
+            }
+            else if(dctime/16%10==8){
+                voxels.setVoxel(0,16,1,'eight');
+            }
+            else if(dctime/16%10==9){
+                voxels.setVoxel(0,16,1,'nine');
+            }
+            // 十位
+            if(String(dctime/16%60).length==1){
+                voxels.setVoxel(0,16,2,'zero');
+            }
+            else if(String(dctime/16%100)[0]=='1'){
+                voxels.setVoxel(0,16,2,'one');
+            }
+            else if(String(dctime/16%100)[0]=='2'){
+                voxels.setVoxel(0,16,2,'two');
+            }
+            else if(String(dctime/16%100)[0]=='3'){
+                voxels.setVoxel(0,16,2,'three');
+            }
+            else if(String(dctime/16%100)[0]=='4'){
+                voxels.setVoxel(0,16,2,'four');
+            }
+            else if(String(dctime/16%100)[0]=='5'){
+                voxels.setVoxel(0,16,2,'five');
+            }
+            else if(String(dctime/16%100)[0]=='6'){
+                voxels.setVoxel(0,16,2,'six');
+            }
+            else if(String(dctime/16%100)[0]=='7'){
+                voxels.setVoxel(0,16,2,'seven');
+            }
+            else if(String(dctime/16%100)[0]=='8'){
+                voxels.setVoxel(0,16,2,'eight');
+            }
+            else if(String(dctime/16%100)[0]=='9'){
+                voxels.setVoxel(0,16,2,'nine');
+            }
+        }
+        else if(zbtime!=0){
+            if(tick%16==0){
+                zbtime-=16;
+                if(zbtime%160==0){
+                    world.say(`抓捕时间还剩${zbtime/16}秒`)
+                }
+            }
+            // 个位
+            if(zbtime/16%10==0){
+                voxels.setVoxel(0,16,1,'zero');
+            }
+            else if(zbtime/16%10==1){
+                voxels.setVoxel(0,16,1,'one');
+            }
+            else if(zbtime/16%10==2){
+                voxels.setVoxel(0,16,1,'two');
+            }
+            else if(zbtime/16%10==3){
+                voxels.setVoxel(0,16,1,'three');
+            }
+            else if(zbtime/16%10==4){
+                voxels.setVoxel(0,16,1,'four');
+            }
+            else if(zbtime/16%10==5){
+                voxels.setVoxel(0,16,1,'five');
+            }
+            else if(zbtime/16%10==6){
+                voxels.setVoxel(0,16,1,'six');
+            }
+            else if(zbtime/16%10==7){
+                voxels.setVoxel(0,16,1,'seven');
+            }
+            else if(zbtime/16%10==8){
+                voxels.setVoxel(0,16,1,'eight');
+            }
+            else if(zbtime/16%10==9){
+                voxels.setVoxel(0,16,1,'nine');
+            }
+            // 十位
+            if(String(zbtime/16%100).length==1){
+                voxels.setVoxel(0,16,2,'zero');
+            }
+            else if(String(zbtime/16%100)[0]=='1'){
+                voxels.setVoxel(0,16,2,'one');
+            }
+            else if(String(zbtime/16%100)[0]=='2'){
+                voxels.setVoxel(0,16,2,'two');
+            }
+            else if(String(zbtime/16%100)[0]=='3'){
+                voxels.setVoxel(0,16,2,'three');
+            }
+            else if(String(zbtime/16%100)[0]=='4'){
+                voxels.setVoxel(0,16,2,'four');
+            }
+            else if(String(zbtime/16%100)[0]=='5'){
+                voxels.setVoxel(0,16,2,'five');
+            }
+            else if(String(zbtime/16%100)[0]=='6'){
+                voxels.setVoxel(0,16,2,'six');
+            }
+            else if(String(zbtime/16%100)[0]=='7'){
+                voxels.setVoxel(0,16,2,'seven');
+            }
+            else if(String(zbtime/16%100)[0]=='8'){
+                voxels.setVoxel(0,16,2,'eight');
+            }
+            else if(String(zbtime/16%100)[0]=='9'){
+                voxels.setVoxel(0,16,2,'nine');
+            }
+            // 百位
+            if(String(zbtime/16%1000).length<=2){
+                voxels.setVoxel(0,16,3,'zero');
+            }
+            else if(String(zbtime/16%1000)[0]=='1'){
+                voxels.setVoxel(0,16,3,'one');
+            }
+            else if(String(zbtime/16%1000)[0]=='2'){
+                voxels.setVoxel(0,16,3,'two');
+            }
+            else if(String(zbtime/16%1000)[0]=='3'){
+                voxels.setVoxel(0,16,3,'three');
+            }
+            else if(String(zbtime/16%1000)[0]=='4'){
+                voxels.setVoxel(0,16,3,'four');
+            }
+            else if(String(zbtime/16%1000)[0]=='5'){
+                voxels.setVoxel(0,16,3,'five');
+            }
+            else if(String(zbtime/16%1000)[0]=='6'){
+                voxels.setVoxel(0,16,3,'six');
+            }
+            else if(String(zbtime/16%1000)[0]=='7'){
+                voxels.setVoxel(0,16,3,'seven');
+            }
+            else if(String(zbtime/16%1000)[0]=='8'){
+                voxels.setVoxel(0,16,3,'eight');
+            }
+            else if(String(zbtime/16%1000)[0]=='9'){
+                voxels.setVoxel(0,16,3,'nine');
+            }
+        }
+        // else{
+        //     dcz=[]
+        //     zbznc=[]
+        //     dmm=false;
+        //     starting=false;
+        //     world.say(`躲猫猫结束，躲藏者胜利，在场躲藏者胜利次数+1，10s后开启新一轮`)
+        //     world.querySelectorAll('player').forEach((e)=>{
+        //         if(e.dmmzy=='躲藏'){
+        //             e.wintimes+=1;
+        //         }
+        //         e.dmmzy='';
+        //     })
+        //     world.querySelectorAll('player').forEach((e)=>{e.dmmshoudao=false;e.player.color=new GameRGBColor(1,1,1);ycbj(e);})
+        // }
+        if(dctime==0){
+            for(var x = 8; x<=8; x++){
+                for(var y = 1; y<=10; y++){
+                    for(var z = 1; z<=9; z++){
+                        voxels.setVoxel(x, y, z, 0);
+                    }
+                }
+            };
+            for(var x = 1; x<=4; x++){
+                for(var y = 26; y<=26; y++){
+                    for(var z = 1; z<=9; z++){
+                        voxels.setVoxel(x, y, z, 0);
+                    }
+                }
+            };
+        }
+    }
+    // if(dmm==false){
+    //     world.querySelectorAll('player').forEach((e)=>{
+    //         e.player.canFly=true;
+    //         for (const bodyPart in e.player.skinInvisible) {
+    //             e.player.skinInvisible[bodyPart] = true;
+    //         }
+    //     })
+    // }
+    // else{
+    //     world.querySelectorAll('player').forEach((e)=>{
+    //         e.player.canFly=false;
+    //         for (const bodyPart in e.player.skinInvisible) {
+    //             e.player.skinInvisible[bodyPart] = false;
+    //         }
+    //     })
+    // }
+})
+
+world.onEntityContact(({entity,other})=>{
+    if(entity.dmmzy=='抓捕'&&dmm==true&&dctime<=0){
+        if(other.dmmzy=='躲藏'){
+            world.say(`抓捕者抓到了 ${other.player.name}`)
+            entity.player.directMessage(`恭喜抓到人了！经验+10`);
+            entity.exp+=10;
+            savePlayer(entity)
+            other.player.directMessage(`被抓到了！`);
+            other.dmmzy='';
+            ycbj(other);
+            savePlayer(other);
+        }
+    }
+})
+
+// world.onPlayerLeave(({entity})=>{
+//     if(entity.dmmzy=='抓捕'){
+//         let index = zbznc.indexOf(entity.player.name);
+//         if (index !== -1) {
+//             entity.bag.splice(index, 1);
+//         }
+//         zbzrs-=1
+//         world.say(`抓捕者 @${entity.player.name} 退出了游戏，剩余抓捕者 ${zbzrs} 人`)
+//         if(zbzrs==0){
+//             world.say('因为抓捕者全部退出游戏，躲猫猫结束，在场躲藏者胜利场数+1，10秒后开始下一轮')
+//         }
+//         world.querySelectorAll('player').forEach((e)=>{
+//             if(e.dmmzy=='躲藏'){
+//                 e.wintimes+=1;
+//             }
+//             e.dmmzy='';
+//         })
+//         dctime=16;
+//         zbtime=16;
+//         dmm=false;
+//         starting=false;
+//     }
+//     else if(entity.dmmzy=='躲藏'){
+//         let index = dcz.indexOf(entity.player.name);
+//         if (index !== -1) {
+//             entity.bag.splice(index, 1);
+//         }
+//         zbzrs-=1
+//         world.say(`躲藏者 @${entity.player.name} 退出了游戏，剩余抓捕者 ${zbzrs} 人`)
+//         let now_dczrs = 0
+//         world.querySelectorAll('player').forEach((e)=>{
+//             if(e.dmmzy=='躲藏'){
+//                 now_dczrs+=1
+//             }
+//         })
+//         if(now_dczrs==0){
+//             world.say('因为躲藏者全部退出游戏，躲猫猫结束，在场抓捕者胜利场数+1，10秒后开始下一轮')
+//         }
+//         world.querySelectorAll('player').forEach((e)=>{
+//             if(e.dmmzy=='抓捕'){
+//                 e.wintimes+=1;
+//             }
+//             e.dmmzy='';
+//         })
+//         dctime=16;
+//         zbtime=16;
+//         dmm=false;
+//         starting=false;
+//     }
+// })
+world.onTick(({tick})=>{
+    if(tick%16==0){
+        check()
+        console.log(dczrs)
+        console.log(zbzrs)
+        if(dczrs==0||zbzrs==0||zbtime<=0){
+            if(dmm==true&&dctime<=0){
+                dmm=false;
+                starting=false;
+                if(zbzrs==0||zbtime<=0){
+                    world.say('游戏结束，躲藏者胜利，在场躲藏者胜利场数+1，新一局游戏正在路上！')
+                    world.querySelectorAll('player').forEach((e)=>{
+                        if(e.dmmzy=='躲藏'){
+                            e.wintimes+=1;
+                        }
+                        e.dmmzy='';
+                        ycbj(e)
+                        e.dmmshoudao=false;
+                    })
+                }
+                else if(dczrs==0){
+                    world.say('游戏结束，抓捕者胜利，在场抓捕者胜利场数+1，新一局游戏正在路上！')
+                    world.querySelectorAll('player').forEach((e)=>{
+                        if(e.dmmzy=='抓捕'){
+                            e.wintimes+=1;
+                        }
+                        e.dmmzy='';
+                        ycbj(e)
+                        e.dmmshoudao=false;
+                    })
+                }
+            }
+        }
+    }
+})
+
+// 防挂机检测
+world.onPlayerJoin(({entity})=>{
+    entity.xcundang= 0
+    entity.ycundang= 0
+    entity.zcundang= 0
+    entity.i=0
+    world.onTick(async({tick})=>{
+        if(tick%16==0){
+            if(entity.xcundang==entity.position.x&&entity.ycundang==entity.position.y&&entity.zcundang==entity.position.z&&dmm==true&&entity.player.spectator==false){
+                entity.i+=1
+                console.log('挂机',entity.i)
+            }
+            else{
+                entity.i=0
+                entity.xcundang=entity.position.x
+                entity.ycundang=entity.position.y
+                entity.zcundang=entity.position.z
+            }
+            if(entity.i==100&&entity.cankick==true&&entity.player.spectator==false){
+                entity.player.directMessage(`检测到你长时间未移动，现针对你进行防挂机检测`)
+                entity.player.cancelDialogs()
+                entity.player.dialog({
+                    type: GameDialogType.SELECT,
+                    title: '防挂机检测',
+                    // backgroundColor: new GameRGBColor(1,0,0),
+                    content: `若要继续游戏，请在10s内移动角色，超时自动判负并扣除10经验`,
+                    options:[`确定`]
+                });
+            }
+            else if(entity.i==110&&entity.cankick==true&&entity.player.spectator==false){
+                entity.player.cancelDialogs()
+                entity.exp-=10
+                ycbj(entity)
+                savePlayer(entity)
+                world.say(`${entity.player.name} 因为挂机被自动判负并扣除10经验`)
+                entity.player.dialog({
+                    type: GameDialogType.SELECT,
+                    title: '防挂机检测',
+                    // backgroundColor: new GameRGBColor(1,0,0),
+                    content: `由于你的挂机行为，自动判负并扣除10经验，90秒后若再不移动将踢出`,
+                    options:[`确定`]
+                });
+            }
+            else if(entity.i>200){
+                entity.player.kick()
+            }
+        }
+    })
+})
+
+// 互动
+const bilibili = world.querySelector('#B站-2');
+bilibili.enableInteract = true; // 允许进行互动
+bilibili.interactRadius = 3;   // 实体的互动范围
+bilibili.interactHint = `小电视`; // 互动提示框显示实体的名称
+bilibili.interactColor = new GameRGBColor(1,1,1);  // 互动提示的文字颜色
+bilibili.onInteract(async({entity})=>{
+        entity.player.link(`https://space.bilibili.com/490126978?spm_id_from=333.999.0.0`, {isConfirm: false, isNewTab: true});
+        await sleep(1000)
+        entity.player.link(`https://space.bilibili.com/1341163031?spm_id_from=333.1007.0.0`, {isConfirm: false, isNewTab: true});
+})
+
+// 服务端、客户端信息交流/gameUi控制
+world.onTick(({tick})=>{
+    remoteChannel.sendClientEvent(world.querySelectorAll('player'), {
+        type:'世界信息',
+        args:{
+            zbzrs: zbzrs,
+            dczrs: dczrs,
+            time: [zbtime,dctime],
+            message: msglist[0]
+        }
+    })
+    world.querySelectorAll('player').forEach((e)=>{
+        remoteChannel.sendClientEvent(e, {
+            type:'玩家信息1',
+            args:{
+                avatar:e.player.avatar,
+                name:e.player.name,
+                player_title:e.player_title
+            }
+        })
+        remoteChannel.sendClientEvent(e, {
+            type:'玩家信息2',
+            args:{
+                wintimes: e.wintimes,
+                exp: e.exp,
+                x: e.position.x,
+                y: e.position.y,
+                z: e.position.z
+            }
+        })
+    }) 
+})
+
+remoteChannel.onServerEvent(({entity, args, tick})=>{
+    if(args.type=='uierror'){
+        dialog('gameUi',args.text,entity)
+        remoteChannel.sendClientEvent(e, {
+            type:'command',
+            args:'close'
+        })
+    }
+    else if(args.type=='console'){
+        console.log(args.text)
+    }
+    else if(args.type=='zxcommand'){
+        try{
+            world.say(`[管理员命令]${entity.player.name}：${args.cmd}~>${eval(args.cmd)}`)
+        }
+        catch(e){
+            world.say(`[管理员命令]${entity.player.name}：${args.cmd}~>${e}`)
+        }
+    }
+})
+    </p></div>
+    <div id='code-type'><p>javascript</p></div>
+    <div id="code-output" style="width: 100%; height: 500px;"></div>
+    <!-- 引入highlight.js的脚本文件 -->
+    <script src="https://azkbbys.github.io/code-viewer/files/highlight.min.js"></script>
+    <script>
+        var codeParam = document.getElementById("code-input").textContent;
+        var typeParam = document.getElementById("code-type").textContent;
+        document.getElementById('code-input').style.display = 'none';
+        document.getElementById('code-type').style.display = 'none';
+        // 乱码还原
+        codeParam = decodeURIComponent(codeParam);
+        // 将&gt;和&lt;替换成>和<
+        codeParam = codeParam.replace('&gt;', '>').replace('&lt;', '<');
+
+        // 复制代码的函数
+        function copyCode() {
+            var codeText = document.getElementById("code-output").innerText;
+            navigator.clipboard.writeText(codeText).then(function() {
+                alert("代码已复制到剪贴板！");
+            }, function(err) {
+                console.error('无法复制代码: ', err);
+            });
+        }
+
+        // 渲染代码的函数
+        function renderCode() {
+            // 获取输入代码和代码类型
+            var codeInput = codeParam || ''; // 从URL参数中获取代码，如果没有则为空
+            var codeType = typeParam || 'html'; // 从URL参数中获取代码类型，如果没有则默认为html
+            // 如果类型是html，显示下载html按钮
+            if (codeType === 'html') {
+                document.getElementById("download-html").style.display = "block";
+            } else {
+                document.getElementById("download-html").style.display = "none";
+            }
+
+            // 如果输入内容为空，则显示提示
+            if (codeInput.trim() === '') {
+                document.getElementById("code-output").innerHTML = "<font color='white'>未提供内容...</font>";
+            } else {
+                // 转义HTML代码，替换特殊字符
+                codeInput = codeInput.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                // 渲染代码
+                var codeOutput = document.getElementById("code-output");
+                codeOutput.innerHTML = '<pre><code class="language-' + codeType + '">' + codeInput + '</code></pre>';
+                // 代码高亮
+                hljs.highlightBlock(codeOutput.getElementsByTagName('code')[0]);
+            }
+        }
+
+        // 初始化页面时渲染一次代码
+        renderCode();
+
+        function downloadHTML() {
+            var content = document.getElementById("code-input").value;
+            // 创建一个新的Blob对象
+            var blob1 = new Blob([content], { type: 'text/html' });
+            
+            // 创建一个临时URL
+            var url = URL.createObjectURL(blob1);
+
+            // 创建一个链接并触发下载
+            var link = document.createElement('a');
+            link.href = url;
+            link.download = 'myContent.html';
+            link.click();
+            // 释放URL对象
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>

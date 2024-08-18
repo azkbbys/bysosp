@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>《柏林噪声地形生成》源码</title>
+    <!-- 引入highlight.js的样式文件 -->
+    <link rel="stylesheet" href="https://azkbbys.github.io/code-viewer/files/default.min.css">
+    <style>
+        body {
+            background-color: #000000;
+        }
+    </style>
+</head>
+<body>
+    <div style="display: flex; justify-content: flex-end; margin-bottom: 10px;">
+        <button style="position: absolute; top: 10px;" onclick="copyCode()">复制</button>
+        <button id="download-html" style="position: absolute; top: 10px; right: 65px;" onclick="downloadHTML()">下载HTML文件</button>
+    </div>
+    <div id='code-input'><p>
+/*
+ @ author: 阿兹卡班毕业生
+ @ date: 2024-8-11
+ @ description: 《柏林噪声地形生成》源码
+ @ 禁止外传代码，禁止套壳销售，感谢您的配合。
+ @ 此为神奇代码岛dao3.fun地图源码，直接运行会报错，但是柏林噪声的函数在代码里面，可以自行修改后运行
+ @ 如果可以给阿兹卡班毕业生的github(https://github.com/azkbbys)点个star，也是对我莫大的鼓励
+*/
+console.clear()
+var shengcheng = false
+var kadun = 0
+var kadunnumber = 0
+
+function flattenList(nestedList) {
+    return nestedList.reduce((acc, current) => acc.concat(current), []);
+}
+
+async function setBlock(map) {
+    map = flattenList(map)
+    world.say('开始部署地图！')
+    var xiangshu = 0
+    for (let x = 0; x < 256; x++) {
+        for (let z = 0; z < 256; z++) {
+            for (let y = 0; y < 64; y++) {
+                if (y <= map[xiangshu] - 5) {
+                    voxels.setVoxel(x, y, z, 'stone')
+                } else if (y <= map[xiangshu] - 1) {
+                    voxels.setVoxel(x, y, z, 'dirt')
+                } else if (y <= map[xiangshu]) {
+                    voxels.setVoxel(x, y, z, 'grass')
+                } else {
+                    voxels.setVoxel(x, y, z, 0)
+                }
+            }
+            await sleep(1)
+            xiangshu += 1
+        }
+        world.say(`部署进度${xiangshu + 1}/65536 当前卡顿指数${kadunnumber}`)
+    }
+    world.say('随机生成地图完毕！')
+    shengcheng = false
+}
+
+async function lake(h) {
+    for (let x = 0; x <= 255; x++) {
+        for (let y = 0; y <= h; y++) {
+            for (let z = 0; z <= 255; z++) {
+                if (voxels.getVoxelId(x, y, z) == 0) {
+                    voxels.setVoxel(x, y, z, 'water')
+                    if (voxels.name(voxels.getVoxelId(x, y - 1, z)) == 'grass') {
+                        voxels.setVoxel(x, y - 1, z, 'dirt')
+                    }
+                }
+            }
+        }
+    }
+}
+
+class PerlinNoise {
+    constructor(seed = 0) {
+        this.gradients = {};
+        this.seed = seed;
+        this.random = this.seededRandom.bind(this);
+    }
+
+    seededRandom(x, y) {
+        const seed = this.seed;
+        const n = Math.sin(x * 12.9898 + y * 78.233 + seed) * 43758.5453;
+        return n - Math.floor(n);
+    }
+
+    getGradient(x, y) {
+        const hash = x * 57 + y * 131;
+        return this.gradients[hash] || (this.gradients[hash] = this.random(x, y));
+    }
+
+    interpolate(a, b, t) {
+        return a + (b - a) * (6 * t * t * t * t * t - 15 * t * t * t * t + 10 * t * t * t);
+    }
+
+    noise(x, y) {
+        const xFloor = Math.floor(x);
+        const yFloor = Math.floor(y);
+        const x0 = xFloor;
+        const y0 = yFloor;
+        const x1 = x0 + 1;
+        const y1 = y0 + 1;
+
+        const dx = x - x0;
+        const dy = y - y0;
+
+        const c00 = this.getGradient(x0, y0);
+        const c10 = this.getGradient(x1, y0);
+        const c01 = this.getGradient(x0, y1);
+        const c11 = this.getGradient(x1, y1);
+
+        const n00 = c00 * dx + c00 * dy;
+        const n10 = c10 * (dx - 1) + c10 * dy;
+        const n01 = c01 * dx + c01 * (dy - 1);
+        const n11 = c11 * (dx - 1) + c11 * (dy - 1);
+
+        const nx0 = this.interpolate(n00, n10, dx);
+        const nx1 = this.interpolate(n01, n11, dx);
+
+        return this.interpolate(nx0, nx1, dy);
+    }
+}
+
+function generateMap(width, height, seed, scale) {
+    const perlin = new PerlinNoise(seed);
+    const map = [];
+
+    for (let y = 0; y < height; y++) {
+        const row = [];
+        for (let x = 0; x < width; x++) {
+            let noiseValue = 0;
+            let frequency = 1;
+            let amplitude = 1;
+            let maxValue = 0;
+
+            // 使用多层噪声叠加
+            for (let i = 0; i < 5; i++) {
+                noiseValue += perlin.noise((x / width * scale) * frequency, (y / height * scale) * frequency) * amplitude;
+                maxValue += amplitude;
+                amplitude *= 0.5;
+                frequency *= 2;
+            }
+
+            noiseValue /= maxValue;
+
+            // 将噪声值缩放到0到63的范围，并取整
+            const scaledValue = Math.floor(noiseValue * 63)+20;
+            row.push(scaledValue);
+        }
+        map.push(row);
+    }
+
+    return map;
+}
+
+world.onPlayerJoin(async ({ entity }) => {
+    entity.player.spectator = true
+    entity.player.cameraMode = GameCameraMode.FPS
+})
+
+world.onTick(({ tick }) => {
+    if (tick % 160 == 0) {
+        if (shengcheng == false) {
+            world.say('地图现在处于空闲中，点击右键可以重新生成地图！')
+            if (tick % 320 == 0) {
+                world.say('赠送任意数量喵贝壳后右键点击对应按钮即可领取源码！')
+            }
+        }
+    }
+})
+
+world.onPress(async ({ button, entity }) => {
+    if (button === 'action1') {
+        const result = await entity.player.dialog({
+            type: GameDialogType.SELECT,
+            title: '菜单',
+            content: `选择`,
+            options: [`${shengcheng == false ? `开始生成地图` : `地图正在生成中，不要打扰哦~`}`, `投喂得源码`]
+        });
+        if (!result || result.value === null) {
+            return;
+        } else if (result.value == '开始生成地图') {
+            entity.result = await entity.player.dialog({
+                type: GameDialogType.INPUT,
+                title: '生成地图',
+                content: `输入地图配置：种子（一个数字，大小随意） 是否随机湖泊（0否1是，后面紧跟水平面高度，小于等于这个高度都是湖泊，就算不生成湖泊也要写一个，例如：110） 地图不平整程度（数字，越小地图越平整）\n每个内容使用空格隔开`,
+                confirmText: '确认',
+            });
+            if (!entity.result || entity.result == null) {
+                return
+            } else {
+                try {
+                    let splited = entity.result.split(' ')
+                    let seed = parseInt(splited[0])
+                    let sclake = splited[1][0] == 0 ? false : true
+                    let lakeh = splited[1].substr(1)
+                    let scale = String(splited[2])
+                    if (shengcheng == false) {
+                        try {
+                            shengcheng = true
+                            const map = generateMap(256, 256, seed, scale);
+                            console.log(map);
+                            await setBlock(map)
+                            if (sclake) {
+                                world.say(`正在生成湖泊`)
+                                await lake(lakeh)
+                            }
+                            shengcheng = false
+                            world.say(`地图彻底生成完成，让地图歇会吧awa`)
+                        } catch (e) {
+                            entity.player.directMessage(`输入不符合条件`)
+                        }
+                    } else {
+                        entity.player.directMessage(`输入不符合条件或地图已经开始生成`)
+                    }
+                } catch (e) {
+                    entity.player.directMessage(`输入不符合条件`)
+                }
+            }
+        } else if (result.value.startsWith('投喂')) {
+            let result = await entity.player.dialog({
+                type: GameDialogType.SELECT,
+                title: "《柏林噪声地形生成》投喂协议",
+                options: ['我同意本协议并自觉遵守', '不同意退出'],
+                content: `
+...`,
+            });
+            if (!result || result.value == null) return
+            else if (result.value != '我同意本协议并自觉遵守') {
+                entity.player.kick()
+            }
+            let shells = await entity.player.getMiaoShells()
+            if (shells > 0) {
+                await entity.player.dialog({
+                    type: GameDialogType.TEXT,
+                    title: "感谢",
+                    content: `你打赏了${shells}喵贝壳！感谢您的支持！\n关闭此对话框后自动跳出源码链接`,
+                });
+                entity.player.link('https://azkbbys.github.io/Dao3DocsPro/docs/%E3%80%8A%E6%9F%8F%E6%9E%97%E5%99%AA%E5%A3%B0%E5%9C%B0%E5%BD%A2%E7%94%9F%E6%88%90%E3%80%8B%E6%BA%90%E7%A0%81.html', { isConfirm: true, isNewTab: true })
+            } else {
+                entity.player.dialog({
+                    type: GameDialogType.TEXT,
+                    title: "错误",
+                    content: `你还没有打赏任何喵贝壳...无法领取源码！\n请打赏喵贝壳后点击按钮重试！`,
+                });
+            }
+            console.log(shells)
+        }
+    }
+})
+
+world.onTick(async ({ tick, elapsedTimeMS }) => {
+    if (tick % 16 == 0) {
+        kadunnumber = elapsedTimeMS
+        if (elapsedTimeMS > 640 && shengcheng == true) {
+            kadun += 1
+            if (kadun >= 3) {
+                world.say(`地图太卡了系统都看不下去了！正在重启！`)
+                while (1) { }
+            }
+        } else {
+            kadun = 0
+        }
+    }
+})
+        
+    </p></div>
+    <div id='code-type'><p>javascript</p></div>
+    <div id="code-output" style="width: 100%; height: 500px;"></div>
+    <!-- 引入highlight.js的脚本文件 -->
+    <script src="https://azkbbys.github.io/code-viewer/files/highlight.min.js"></script>
+    <script>
+        var codeParam = document.getElementById("code-input").textContent;
+        var typeParam = document.getElementById("code-type").textContent;
+        document.getElementById('code-input').style.display = 'none';
+        document.getElementById('code-type').style.display = 'none';
+        // 乱码还原
+        // codeParam = decodeURIComponent(codeParam);
+        // 将&gt;和&lt;替换成>和<
+        codeParam = codeParam.replace('&gt;', '>').replace('&lt;', '<');
+
+        // 复制代码的函数
+        function copyCode() {
+            var codeText = document.getElementById("code-output").innerText;
+            navigator.clipboard.writeText(codeText).then(function() {
+                alert("代码已复制到剪贴板！");
+            }, function(err) {
+                console.error('无法复制代码: ', err);
+            });
+        }
+
+        // 渲染代码的函数
+        function renderCode() {
+            // 获取输入代码和代码类型
+            var codeInput = codeParam || ''; // 从URL参数中获取代码，如果没有则为空
+            var codeType = typeParam || 'html'; // 从URL参数中获取代码类型，如果没有则默认为html
+            // 如果类型是html，显示下载html按钮
+            if (codeType === 'html') {
+                document.getElementById("download-html").style.display = "block";
+            } else {
+                document.getElementById("download-html").style.display = "none";
+            }
+
+            // 如果输入内容为空，则显示提示
+            if (codeInput.trim() === '') {
+                document.getElementById("code-output").innerHTML = "<font color='white'>未提供内容...</font>";
+            } else {
+                // 转义HTML代码，替换特殊字符
+                codeInput = codeInput.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                // 渲染代码
+                var codeOutput = document.getElementById("code-output");
+                codeOutput.innerHTML = '<pre><code class="language-' + codeType + '">' + codeInput + '</code></pre>';
+                // 代码高亮
+                hljs.highlightBlock(codeOutput.getElementsByTagName('code')[0]);
+            }
+        }
+
+        // 初始化页面时渲染一次代码
+        renderCode();
+
+        function downloadHTML() {
+            var content = document.getElementById("code-input").value;
+            // 创建一个新的Blob对象
+            var blob1 = new Blob([content], { type: 'text/html' });
+            
+            // 创建一个临时URL
+            var url = URL.createObjectURL(blob1);
+
+            // 创建一个链接并触发下载
+            var link = document.createElement('a');
+            link.href = url;
+            link.download = 'myContent.html';
+            link.click();
+            // 释放URL对象
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
